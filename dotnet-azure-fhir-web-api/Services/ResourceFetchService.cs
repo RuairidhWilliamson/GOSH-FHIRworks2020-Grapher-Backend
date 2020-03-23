@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HDR_UK_Web_Application.Services
 {
@@ -12,12 +13,14 @@ namespace HDR_UK_Web_Application.Services
     {
         private readonly IProtectedWebApiCallerService _caller;
         private readonly ILoggerManager _logger;
+        private readonly IMemoryCache _cache;
         private readonly AuthenticationConfig config = AuthenticationConfig.ReadFromJsonFile("appsettings.json");
 
-        public ResourceFetchService(IProtectedWebApiCallerService caller, ILoggerManager logger)
+        public ResourceFetchService(IProtectedWebApiCallerService caller, ILoggerManager logger, IMemoryCache cache)
         {
             _caller = caller;
             _logger = logger;
+            _cache = cache;
         }
 
         public async Task<JObject> GetSinglePage(string requestOptions)
@@ -36,19 +39,22 @@ namespace HDR_UK_Web_Application.Services
 
         public async Task<List<JObject>> GetAllPages(string requestOptions)
         {
-            List<JObject> list = new List<JObject>();
+            return await _cache.GetOrCreateAsync($"GetAllPages{requestOptions}", async entry =>
+            {
+                List<JObject> list = new List<JObject>();
 
-            try
-            {
-                _logger.LogInfo("Class: ResourceFetchService, Method: GetAllPages");
-                var json = await _caller.ProtectedWebApiCaller($"{config.BaseAddress}{requestOptions}");
-                return await RetrieveAllPages(json, list);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Class: ResourceFetchService, Method: GetAllPages, Exception: {ex.Message}");
-                return null;
-            }
+                try
+                {
+                    _logger.LogInfo("Class: ResourceFetchService, Method: GetAllPages");
+                    var json = await _caller.ProtectedWebApiCaller($"{config.BaseAddress}{requestOptions}");
+                    return await RetrieveAllPages(json, list);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Class: ResourceFetchService, Method: GetAllPages, Exception: {ex.Message}");
+                    return null;
+                }
+            });
         }
 
         public async Task<List<JObject>> GetPages(string requestOptions, int pages)

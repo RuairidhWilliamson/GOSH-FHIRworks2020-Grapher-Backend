@@ -47,6 +47,7 @@ namespace HDR_UK_Web_Application
             services.AddTransient<IResourceFetchService, ResourceFetchService>();
             services.AddTransient<IPatientService, PatientService>();
             services.AddTransient<IObservationService, ObservationService>();
+            services.AddTransient<IAggregateService, AggregateService>();
 
             services.AddCors(options =>
             {
